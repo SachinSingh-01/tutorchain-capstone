@@ -2,3 +2,4 @@ python-dotenv
 sqlitedict
 requests
 rich
+google-genai
