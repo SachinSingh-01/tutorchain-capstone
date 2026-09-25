@@ -1,45 +1,61 @@
 # tutorchain/llm_wrapper.py
+"""Provider-agnostic LLM wrapper.
+
+Local mode is deterministic and requires no API key.
+Gemini mode uses Google's current GenAI Python SDK.
 """
-Simple LLM wrapper with placeholder mode for local testing.
-Replace the `call_llm` implementation with Gemini/ADK/OpenAI calls when ready.
-Uses environment variable LLM_PROVIDER to switch mode.
-"""
+
 import os
+
 from dotenv import load_dotenv
 
-# Load variables from .env file
 load_dotenv()
 
-# Which provider to use: local | openai | gemini
-LLM_PROVIDER = os.getenv("LLM_PROVIDER", "local")
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "local").strip().lower()
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
+
 
 def call_llm(prompt: str, system: str = None, max_tokens: int = 256) -> str:
-    """
-    Wrapper to call LLM. For now 'local' provider returns a simple response.
-    Actual LLM calls will be added later when you enable Gemini/OpenAI.
-    """
-    
-    # ----------------------------------------------------
-    # 1. Local mode (default): no internet, no API needed
-    # ----------------------------------------------------
+    """Return generated text from the configured provider."""
+
+    if not prompt.strip():
+        raise ValueError("Prompt cannot be empty.")
+
     if LLM_PROVIDER == "local":
-        # Easy placeholder output for testing
-        return f"[LLM-PLACEHOLDER] Prompt received: {prompt[:120]}..."
-    
-    # ----------------------------------------------------
-    # 2. OpenAI provider (if you want to use it later)
-    # ----------------------------------------------------
-    elif LLM_PROVIDER == "openai":
-        raise NotImplementedError("OpenAI provider not configured yet. Will add when you confirm.")
-    
-    # ----------------------------------------------------
-    # 3. Gemini provider (ADK or Gemini API)
-    # ----------------------------------------------------
-    elif LLM_PROVIDER == "gemini":
-        raise NotImplementedError("Gemini provider not configured yet. Will add when you confirm.")
-    
-    # ----------------------------------------------------
-    # 4. Error case
-    # ----------------------------------------------------
-    else:
-        raise ValueError(f"Unknown LLM_PROVIDER: {LLM_PROVIDER}")
+        return (
+            "Local mode is active. Configure LLM_PROVIDER=gemini and "
+            "GEMINI_API_KEY to enable model-generated responses."
+        )
+
+    if LLM_PROVIDER == "gemini":
+        from google import genai
+        from google.genai import types
+
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            raise RuntimeError("GEMINI_API_KEY is required when LLM_PROVIDER=gemini.")
+
+        client = genai.Client(api_key=api_key)
+        config_kwargs = {"max_output_tokens": max_tokens}
+
+        if system:
+            config_kwargs["system_instruction"] = system
+
+        response = client.models.generate_content(
+            model=GEMINI_MODEL,
+            contents=prompt,
+            config=types.GenerateContentConfig(**config_kwargs),
+        )
+
+        if not response.text:
+            raise RuntimeError("Gemini returned an empty response.")
+
+        return response.text.strip()
+
+    if LLM_PROVIDER == "openai":
+        raise NotImplementedError(
+            "OpenAI provider is not implemented yet. "
+            "Use LLM_PROVIDER=gemini or local."
+        )
+
+    raise ValueError(f"Unsupported LLM_PROVIDER: {LLM_PROVIDER}")
