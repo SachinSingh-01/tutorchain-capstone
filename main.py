@@ -1,14 +1,5 @@
 # main.py
-"""
-TutorChain Main Orchestrator (Final Build)
-Includes:
-- Structured JSON Lesson Plan
-- Logging + Observability
-- Memory Upgrade (topics, weak areas, attempts, last score)
-- LLM-as-a-Judge Evaluation
-- Metrics (session duration, avg score, avg clarity)
-- Mastery Auto-Learning Mode
-"""
+"""TutorChain application entry point."""
 
 from tutorchain.agents.memory_agent import MemoryAgent
 from tutorchain.agents.planner import plan_lesson
@@ -28,12 +19,11 @@ def demo_session(student_id: str, topic: str):
     print("     TutorChain Session")
     print("==========================\n")
 
-    # 1️⃣ Load / Create Profile
     try:
         profile = mem.get_profile(student_id) or {
             "name": student_id,
             "level": "beginner",
-            "goals": ["learn basics"]
+            "goals": ["learn basics"],
         }
         mem.save_profile(student_id, profile)
         log_info(f"Loaded profile for {student_id}")
@@ -43,7 +33,6 @@ def demo_session(student_id: str, topic: str):
 
     print("👤 Student Profile:", profile)
 
-    # 2️⃣ Lesson Planning
     try:
         plan = plan_lesson(profile, topic)
         log_event("LessonPlanGenerated", {"topic": topic})
@@ -57,7 +46,6 @@ def demo_session(student_id: str, topic: str):
     print("\nExplanation (base):", plan["explanation"])
     print("\nPractice (base):", plan["practice_exercise"])
 
-    # 3️⃣ Tutor Teaching
     try:
         tutor_resp = teach(plan)
         log_event("TutorExplanation", {"topic": topic})
@@ -68,49 +56,60 @@ def demo_session(student_id: str, topic: str):
     print("\n🧑‍🏫 Final Explanation:\n", tutor_resp["explanation"])
     print("\n📝 Practice Question:\n", tutor_resp["exercise"])
 
-    # 4️⃣ Student Answer
-    student_answer = input("\n✏ Enter your answer: ")
-    reference_answer = plan["practice_exercise"]
+    student_answer = input("\n✏ Enter your answer: ").strip()
+    reference_answer = tutor_resp["reference_answer"]
 
-    # 5️⃣ Assessment
     try:
         assessment = grade_answer(student_answer, reference_answer)
         metrics.add_score(assessment["score"])
-        log_event("AssessmentCompleted", {"score": assessment["score"]})
+        log_event(
+            "AssessmentCompleted",
+            {
+                "score": assessment["score"],
+                "method": assessment["scoring_method"],
+            },
+        )
     except Exception as e:
         log_error(f"Assessment error: {e}")
         return
 
     print("\n📊 Assessment Result:")
     print("Score:", assessment["score"])
+    print("Scoring method:", assessment["scoring_method"])
     print("Feedback:", assessment["feedback"])
 
-    # 6️⃣ Evaluation (LLM-as-a-Judge)
     try:
         eval_data = evaluate_session(
             topic,
             tutor_resp["explanation"],
             tutor_resp["exercise"],
             student_answer,
-            assessment["score"]
+            assessment["score"],
         )
-        metrics.add_tutor_clarity(eval_data.get("tutor_clarity", 0))
+        clarity = eval_data.get("tutor_clarity")
+        if isinstance(clarity, (int, float)):
+            metrics.add_tutor_clarity(clarity)
         log_event("EvaluationCompleted", eval_data)
-    except:
-        eval_data = {}
-        log_error("Evaluation failed")
+    except Exception as e:
+        eval_data = {
+            "available": False,
+            "summary": f"Evaluation failed: {e}",
+        }
+        log_error(f"Evaluation error: {e}")
 
-    print("\n🤖 LLM-as-a-Judge Review:")
-    print(eval_data or "Evaluation unavailable")
+    print("\n🤖 Session Evaluation:")
+    print(eval_data)
 
-    # 7️⃣ Memory Save
     try:
-        mem.append_history(student_id, {
-            "topic": topic,
-            "answer": student_answer,
-            "assessment": assessment,
-            "evaluation": eval_data
-        })
+        mem.append_history(
+            student_id,
+            {
+                "topic": topic,
+                "answer": student_answer,
+                "assessment": assessment,
+                "evaluation": eval_data,
+            },
+        )
         mem.add_topic(student_id, topic)
         mem.update_last_score(student_id, assessment["score"])
         mem.update_weak_areas(student_id, topic, assessment["score"])
@@ -120,7 +119,6 @@ def demo_session(student_id: str, topic: str):
         log_error(f"Memory error: {e}")
         return
 
-    # 8️⃣ Metrics
     duration = metrics.end()
 
     print("\n📈 Performance Summary")
@@ -131,13 +129,9 @@ def demo_session(student_id: str, topic: str):
     print("Session Time:", duration, "seconds")
     print("Avg Score:", metrics.get_avg_score())
     print("Avg Tutor Clarity:", metrics.get_avg_clarity())
-
     print("\n🎉 Session Finished")
 
 
-# =======================
-# MASTER LEARNING MODE
-# =======================
 def mastery_session(student_id: str, topic: str, target_score: int = 80):
     print("\n🔁 Mastery Mode Activated")
     attempt = 1
@@ -149,7 +143,7 @@ def mastery_session(student_id: str, topic: str, target_score: int = 80):
         mem = MemoryAgent()
         score = mem.get_last_score(student_id)
 
-        if score and score >= target_score:
+        if score is not None and score >= target_score:
             print(f"\n🏆 Mastered! Final Score = {score}")
             break
 
@@ -161,9 +155,6 @@ def mastery_session(student_id: str, topic: str, target_score: int = 80):
         attempt += 1
 
 
-# =====================
-# PROGRAM ENTRY POINT
-# =====================
 if __name__ == "__main__":
     print("===================================")
     print("  Welcome to TutorChain AI Tutor")
