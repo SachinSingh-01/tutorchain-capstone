@@ -4,7 +4,7 @@
 
 TutorChain is a **multi-agent AI tutoring prototype** designed around a personalized, mastery-oriented learning workflow. The project separates planning, tutoring, assessment, evaluation, and student-memory responsibilities into distinct modules.
 
-> **Project status:** Capstone prototype / learning project. The repository demonstrates the architecture and orchestration of an AI tutoring system, while some LLM integrations and evaluation components remain placeholders or prototype implementations.
+> **Project status:** Capstone prototype / learning project. Gemini is supported as the real LLM provider; local mode remains available for offline development. The assessment and evaluation systems are still prototype components and should not be treated as validated educational measurement.
 
 ---
 
@@ -26,16 +26,18 @@ TutorChain explores how a modular agent workflow can address these problems.
 
 The current codebase includes:
 
-- A lesson-planning module
-- A tutor module
-- An assessment module
-- An evaluation module
+- Structured lesson planning
+- Tutor-generated explanations and exercises
+- Wikipedia-based external knowledge lookup
+- Gemini-powered generation when configured
+- Rubric-based Gemini answer assessment
+- A transparent local text-similarity assessment baseline
 - Persistent student memory using SQLite-backed storage
 - A mastery-session loop
 - Rich console logging
 - Basic session metrics
-- A configurable LLM wrapper interface
-- A Wikipedia-based knowledge lookup integration
+- Structured session evaluation
+- Explicit evaluation-unavailable handling instead of fabricated scores
 
 The system is structured so that individual responsibilities can be developed and replaced independently.
 
@@ -53,14 +55,14 @@ The mastery workflow can repeat the learning cycle until the configured target s
 
 | Component | Responsibility |
 |---|---|
-| Planner | Produces a structured lesson plan |
+| Planner | Produces a structured lesson plan and reference answer |
 | Tutor | Generates explanations and practice material |
-| Assessor | Produces an answer score and feedback |
-| Evaluator | Evaluates session-level tutoring signals |
+| Assessor | Scores the student's answer against an actual reference answer |
+| Evaluator | Evaluates session-level tutoring signals when Gemini is enabled |
 | Memory Agent | Persists student profile, history, topics, attempts, scores, and weak areas |
 | Metrics | Tracks basic session-level measurements |
 | Logging | Provides structured console/event logging |
-| LLM Wrapper | Provides the interface used by the agent modules to call an LLM |
+| LLM Wrapper | Connects the application to the configured LLM provider |
 
 ---
 
@@ -93,19 +95,29 @@ tutorchain-capstone/
 
 ### LLM Integration
 
-The LLM wrapper currently defaults to a **local placeholder provider**. OpenAI and Gemini provider branches are defined as extension points but are not implemented in the current codebase.
+The default provider is **local**, which requires no API key and keeps the project runnable as a prototype.
 
-Therefore, the repository should be viewed as an **agent-system prototype**, not as a production-ready Gemini/OpenAI application.
+For real model-generated tutoring, set:
+
+```env
+LLM_PROVIDER=gemini
+GEMINI_API_KEY=your-key-here
+GEMINI_MODEL=gemini-3.8-flash
+```
+
+The Gemini integration uses Google's GenAI Python SDK. citeturn0search1turn0search3
 
 ### Assessment
 
-The current assessor uses normalized string similarity as a simple prototype scoring mechanism. It is **not equivalent to semantic correctness evaluation**.
+With Gemini enabled, the assessor uses a rubric-based JSON response and scores the student's answer against an actual reference answer.
+
+In local mode, TutorChain uses a transparent text-similarity baseline. This is a prototype heuristic and **not semantic correctness evaluation**.
 
 ### Session Evaluation
 
-The evaluator is designed around structured JSON scoring, but fallback behavior exists when an LLM response cannot be parsed. These values should be treated as prototype fallback behavior rather than validated educational evaluation metrics.
+With Gemini enabled, the evaluator requests structured session-level scores for tutor clarity, exercise quality, and student understanding.
 
-These limitations are intentionally documented so the project description matches the current implementation.
+If an LLM response is unavailable or invalid, TutorChain reports evaluation as unavailable rather than inserting hardcoded scores.
 
 ---
 
@@ -140,17 +152,25 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 4. Environment configuration
+### 4. Configure Gemini
 
-Copy `.env.example` to `.env` if you want to configure environment variables.
+Copy `.env.example` to `.env`.
 
-**Do not commit real API keys or secrets to the repository.**
+For real LLM operation:
+
+```env
+LLM_PROVIDER=gemini
+GEMINI_API_KEY=your-key-here
+GEMINI_MODEL=gemini-3.8-flash
+```
+
+**Never commit the real API key to GitHub.**
 
 ---
 
 ## Running the Project
 
-Start the interactive application with:
+Start the interactive application:
 
 ```bash
 python main.py
@@ -189,25 +209,36 @@ These metrics are intended for prototype observability and experimentation.
 
 ---
 
+## Limitations
+
+TutorChain is a capstone prototype, not a production educational platform.
+
+Known limitations include:
+
+- OpenAI is not currently implemented as a provider.
+- Local answer scoring is a text-similarity baseline.
+- Gemini assessment depends on valid model output.
+- Session evaluation is only available when a real LLM provider is configured.
+- No automated test suite is currently included.
+
+---
+
 ## Future Improvements
 
-Potential next steps include:
-
-- Implementing a real Gemini/OpenAI provider in the LLM wrapper
-- Replacing string-similarity assessment with semantic/rubric-based answer evaluation
-- Improving reference-answer handling
-- Adding reliable automated tests
-- Adding code execution for programming lessons
-- Expanding tool integrations
-- Adding a web UI
-- Deploying the agent workflow
-- Adding voice interaction
+- Add an OpenAI provider
+- Add automated unit/integration tests
+- Improve semantic answer assessment
+- Add code execution for programming lessons
+- Expand tool integrations
+- Add a web UI
+- Deploy the agent workflow
+- Add voice interaction
 
 ---
 
 ## Why This Project Matters
 
-TutorChain was built as a capstone project to explore **multi-agent orchestration, tool integration, persistent learner state, evaluation, and mastery-oriented workflows**.
+TutorChain was built as a capstone project to explore **multi-agent orchestration, tool integration, persistent learner state, LLM-based evaluation, and mastery-oriented workflows**.
 
 It is a foundation for experimenting with personalized AI learning systems rather than a claim of production readiness.
 
