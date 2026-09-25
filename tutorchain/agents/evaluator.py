@@ -1,42 +1,53 @@
 # tutorchain/agents/evaluator.py
-"""
-Evaluation Agent (LLM-as-a-Judge)
-Yeh agent tutor + assessor ke output ko evaluate karta hai.
-"""
+"""Session Evaluation Agent."""
 
-from tutorchain.llm_wrapper import call_llm
+import json
+
+from tutorchain.llm_wrapper import LLM_PROVIDER, call_llm
 
 
-def evaluate_session(topic: str, explanation: str, exercise: str, student_answer: str, score: float) -> dict:
+def evaluate_session(
+    topic: str,
+    explanation: str,
+    exercise: str,
+    student_answer: str,
+    score: float,
+) -> dict:
+    """Evaluate a session when an actual LLM provider is configured.
+
+    Local mode explicitly reports that LLM evaluation is unavailable instead
+    of returning fabricated scores.
     """
-    LLM-as-a-Judge style evaluation.
-    """
+
+    if LLM_PROVIDER == "local":
+        return {
+            "available": False,
+            "tutor_clarity": None,
+            "exercise_quality": None,
+            "understanding": None,
+            "summary": "LLM-based session evaluation is unavailable in local mode.",
+        }
 
     prompt = f"""
 You are an AI evaluator using rubric-based scoring.
 
-Evaluate the following tutoring session:
+Evaluate this tutoring session:
 
 Topic: {topic}
 
 Tutor Explanation:
 {explanation}
 
-Exercise Given:
+Exercise:
 {exercise}
 
 Student Answer:
 {student_answer}
 
-Assessor Score: {score}
+Baseline Assessor Score:
+{score}
 
-Now provide:
-1. Tutor Clarity Score (0–10)
-2. Exercise Quality Score (0–10)
-3. Student Understanding Score (0–10)
-4. One-line summary evaluation
-Return the result in this exact JSON format:
-
+Return ONLY valid JSON:
 {{
   "tutor_clarity": number,
   "exercise_quality": number,
@@ -45,18 +56,18 @@ Return the result in this exact JSON format:
 }}
 """
 
-    raw = call_llm(prompt)
-
-    # Parsing fallback
     try:
-        import json
-        data = json.loads(raw)
-    except:
-        data = {
-            "tutor_clarity": 7,
-            "exercise_quality": 7,
-            "understanding": 7,
-            "summary": raw
+        data = json.loads(call_llm(prompt))
+        for key in ("tutor_clarity", "exercise_quality", "understanding", "summary"):
+            if key not in data:
+                raise ValueError(f"Missing evaluation field: {key}")
+        data["available"] = True
+        return data
+    except (json.JSONDecodeError, TypeError, ValueError):
+        return {
+            "available": False,
+            "tutor_clarity": None,
+            "exercise_quality": None,
+            "understanding": None,
+            "summary": "LLM evaluation returned invalid structured output.",
         }
-
-    return data
