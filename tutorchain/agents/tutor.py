@@ -1,66 +1,74 @@
 # tutorchain/agents/tutor.py
-"""
-Tutor Agent (Enhanced Version)
-Uses:
-- Structured JSON lesson plan
-- Knowledge lookup tool (Wikipedia)
-- LLM-based explanation + custom exercise
+"""Tutor Agent.
+
+Combines a lesson plan with optional external knowledge and an LLM provider.
+Local mode remains runnable without an API key.
 """
 
-from tutorchain.llm_wrapper import call_llm
+import json
+
+from tutorchain.llm_wrapper import LLM_PROVIDER, call_llm
 from tutorchain.tools.knowledge_tool import lookup_topic
 
 
 def teach(plan: dict) -> dict:
-    """
-    Uses structured lesson plan + external tool to create better explanations.
-    plan example:
-    {
-      'topic': 'loops',
-      'objectives': [...],
-      'explanation': '...',
-      'practice_exercise': '...'
-    }
-    """
+    """Generate an explanation, exercise, and reference answer."""
 
-    # Fetch external verified info (wikipedia)
     external_info = lookup_topic(plan["topic"])
 
-    # ---------- MAIN EXPLANATION ----------
-    prompt_exp = f"""
+    if LLM_PROVIDER == "local":
+        explanation = plan["explanation"]
+        if external_info:
+            explanation = f"{explanation}\n\nAdditional reference information:\n{external_info}"
+
+        return {
+            "explanation": explanation,
+            "exercise": plan["practice_exercise"],
+            "reference_answer": plan["reference_answer"],
+        }
+
+    explanation_prompt = f"""
 You are an expert teacher.
 
 Teach the topic below using:
 1. Simple language
 2. Step-by-step approach
-3. Real-life analogy
-4. 1 coding or academic example
+3. A real-life analogy
+4. One coding or academic example
 5. Bullet points
 
 Topic: {plan['topic']}
 Objectives: {plan['objectives']}
-External Info (use if helpful): {external_info}
+External Info: {external_info}
 Base Lesson Info: {plan['explanation']}
 
-Now produce the BEST educational explanation for a beginner.
+Produce a beginner-friendly explanation.
 """
 
-    explanation = call_llm(prompt_exp)
+    explanation = call_llm(explanation_prompt)
 
-    # ---------- EXERCISE GENERATION ----------
-    prompt_ex = f"""
-Create ONE high-quality practice question for topic: {plan['topic']}
+    exercise_prompt = f"""
+Create ONE high-quality beginner practice question for: {plan['topic']}.
 
-Rules:
-- Must match beginner level
-- Should relate to skills in objectives
-- No answer included in the question
-- Keep it short and clear
+Return ONLY valid JSON:
+{{
+  "exercise": "question",
+  "reference_answer": "correct concise answer"
+}}
+
+The reference_answer must answer the exercise.
 """
 
-    exercise = call_llm(prompt_ex)
+    try:
+        exercise_data = json.loads(call_llm(exercise_prompt))
+        exercise = exercise_data["exercise"]
+        reference_answer = exercise_data["reference_answer"]
+    except (json.JSONDecodeError, KeyError, TypeError, ValueError):
+        exercise = plan["practice_exercise"]
+        reference_answer = plan["reference_answer"]
 
     return {
         "explanation": explanation,
-        "exercise": exercise
+        "exercise": exercise,
+        "reference_answer": reference_answer,
     }
