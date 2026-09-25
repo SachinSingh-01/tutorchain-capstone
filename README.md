@@ -1,198 +1,218 @@
-# TutorChain: Multi-Agent Personalized AI Tutor  
-### Capstone Project – Google & Kaggle Agents Intensive (2025)
+# TutorChain: Multi-Agent Personalized AI Tutor
 
-TutorChain is a multi-agent AI tutoring system designed to deliver personalized, adaptive, and mastery-based learning. It uses a structured pipeline of agents—planner, tutor, assessor, evaluator, and memory agent—to create a complete learning loop. The system integrates external tools, long-term memory, observability, and AI-based evaluation.
+### Capstone Project — Google & Kaggle Agents Intensive (2025)
 
-This repository contains the full implementation used for the Capstone Project submission.
+TutorChain is a **multi-agent AI tutoring prototype** designed around a personalized, mastery-oriented learning workflow. The project separates planning, tutoring, assessment, evaluation, and student-memory responsibilities into distinct modules.
 
----
-
-## 1. Problem Statement
-
-Students learning technical topics face challenges such as:
-
-- Lack of personalized learning  
-- No memory of past weak areas  
-- No automated feedback or scoring  
-- No evaluation of tutoring quality  
-- Static explanations that do not adapt  
-
-These gaps slow down improvement and reduce mastery.
+> **Project status:** Capstone prototype / learning project. The repository demonstrates the architecture and orchestration of an AI tutoring system, while some LLM integrations and evaluation components remain placeholders or prototype implementations.
 
 ---
 
-## 2. Solution: TutorChain
+## Problem Statement
 
-TutorChain provides a complete AI-powered tutoring workflow:
+Technical learners can struggle with:
 
-- Generates structured lesson plans  
-- Uses external knowledge (Wikipedia)  
-- Teaches with step-by-step explanations  
-- Generates practice questions  
-- Scores answers  
-- Evaluates tutoring quality using LLM-as-a-Judge  
-- Stores long-term learning data  
-- Repeats teaching until mastery is reached (Mastery Mode)  
-- Logs all events for observability  
+- Generic explanations that do not account for learning context
+- Losing track of previous topics and weak areas
+- Limited automated feedback
+- Repeating the same material without a mastery loop
+- Difficulty evaluating the quality of a tutoring session
 
-The system behaves like a real tutor that remembers, evaluates, and adapts over time.
+TutorChain explores how a modular agent workflow can address these problems.
 
 ---
 
-## 3. Features Included (Capstone Requirements)
+## What TutorChain Implements
 
-### Multi-Agent Architecture
-- Lesson Planner Agent  
-- Tutor Agent  
-- Assessor Agent  
-- Evaluator Agent  
-- Memory Agent  
-- Mastery Learning Orchestrator  
+The current codebase includes:
 
-### Tools
-- Wikipedia search tool  
-- LLM wrapper (Gemini-ready placeholder)  
+- A lesson-planning module
+- A tutor module
+- An assessment module
+- An evaluation module
+- Persistent student memory using SQLite-backed storage
+- A mastery-session loop
+- Rich console logging
+- Basic session metrics
+- A configurable LLM wrapper interface
+- A Wikipedia-based knowledge lookup integration
 
-### Memory & State
-- Student profile  
-- Session history  
-- Weak areas  
-- Attempts tracking  
-- Last score  
-
-### Observability
-- Rich logs  
-- Event tables  
-- Session metrics  
-
-### Agent Evaluation
-- LLM-as-a-Judge scoring  
-- Structured JSON evaluation  
+The system is structured so that individual responsibilities can be developed and replaced independently.
 
 ---
 
-## 4. System Architecture
+## Architecture
 
-Student Input → Planner Agent → Tutor Agent → Student Response
-↓ ↓
-Memory Agent ← Assessor Agent ← Evaluator Agent (LLM-a-a-Judge)
-↓
-Mastery Mode Loop
+Conceptually, the workflow is:
 
+**Student Input → Planner → Tutor → Student Response → Assessor → Evaluator → Memory**
 
----
+The mastery workflow can repeat the learning cycle until the configured target score is reached or the attempt limit is exhausted.
 
-## 5. Project Structure
+### Main Components
 
-tutorchain/
-│── main.py
-│── llm_wrapper.py
-│── planner.py
-│── tutor.py
-│── assessor.py
-│── evaluator.py
-│── logging_utils.py
-│── metrics.py
-│── knowledge_tool.py
-│── memory_agent.py
-│── requirements.txt
-
+| Component | Responsibility |
+|---|---|
+| Planner | Produces a structured lesson plan |
+| Tutor | Generates explanations and practice material |
+| Assessor | Produces an answer score and feedback |
+| Evaluator | Evaluates session-level tutoring signals |
+| Memory Agent | Persists student profile, history, topics, attempts, scores, and weak areas |
+| Metrics | Tracks basic session-level measurements |
+| Logging | Provides structured console/event logging |
+| LLM Wrapper | Provides the interface used by the agent modules to call an LLM |
 
 ---
 
-## 6. Installation
+## Repository Structure
 
-### Step 1: Clone the repo
-git clone https://github.com/your-username/tutorchain.git
-cd tutorchain
+The repository uses a Python package structure:
 
+```text
+tutorchain-capstone/
+├── main.py
+├── requirements.txt
+├── .env.example
+├── .gitignore
+└── tutorchain/
+    ├── __init__.py
+    ├── agents/
+    │   ├── planner.py
+    │   ├── tutor.py
+    │   ├── assessor.py
+    │   ├── evaluator.py
+    │   └── memory_agent.py
+    ├── llm_wrapper.py
+    ├── logging_utils.py
+    └── metrics.py
+```
 
-### Step 2: Create virtual environment
+---
+
+## Current Implementation Status
+
+### LLM Integration
+
+The LLM wrapper currently defaults to a **local placeholder provider**. OpenAI and Gemini provider branches are defined as extension points but are not implemented in the current codebase.
+
+Therefore, the repository should be viewed as an **agent-system prototype**, not as a production-ready Gemini/OpenAI application.
+
+### Assessment
+
+The current assessor uses normalized string similarity as a simple prototype scoring mechanism. It is **not equivalent to semantic correctness evaluation**.
+
+### Session Evaluation
+
+The evaluator is designed around structured JSON scoring, but fallback behavior exists when an LLM response cannot be parsed. These values should be treated as prototype fallback behavior rather than validated educational evaluation metrics.
+
+These limitations are intentionally documented so the project description matches the current implementation.
+
+---
+
+## Installation
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/SachinSingh-01/tutorchain-capstone.git
+cd tutorchain-capstone
+```
+
+### 2. Create a virtual environment
+
+**Windows:**
+
+```powershell
 python -m venv .venv
-.venv\Scripts\activate # Windows
-source .venv/bin/activate # Mac/Linux
+.venv\\Scripts\\activate
+```
 
+**macOS/Linux:**
 
-### Step 3: Install dependencies
+```bash
+python -m venv .venv
+source .venv/bin/activate
+```
+
+### 3. Install dependencies
+
+```bash
 pip install -r requirements.txt
+```
 
+### 4. Environment configuration
 
-### Step 4 (Optional): Add Gemini API Key
-Create a `.env` file:
-GEMINI_API_KEY=your-key-here
+Copy `.env.example` to `.env` if you want to configure environment variables.
 
+**Do not commit real API keys or secrets to the repository.**
 
 ---
 
-## 7. How to Run
+## Running the Project
 
-### Normal tutoring session:
+Start the interactive application with:
+
+```bash
 python main.py
+```
 
-
-### Mastery Learning Mode (notebook version):
-mastery_session("student1", "while loops in C", target_score=80)
-
+The application asks for a student identifier, learning topic, and session mode.
 
 ---
 
-## 8. Component Overview
+## Memory
 
-### Lesson Planner Agent  
-Creates structured JSON-based lesson plans.
+TutorChain stores persistent student state using SQLite-backed storage, including:
 
-### Tutor Agent  
-Uses:
-- lesson plan  
-- Wikipedia knowledge  
-- LLM explanation  
+- Student profile
+- Session history
+- Topics
+- Attempts
+- Last score
+- Weak areas
 
-### Assessor Agent  
-Scores answers and provides feedback.
-
-### Evaluator Agent  
-Grades the full session using JSON scoring.
-
-### Memory Agent  
-Stores:
-- topics learned  
-- weak areas  
-- attempts  
-- last score  
-
-### Metrics  
-Tracks:
-- average score  
-- average clarity  
-- session duration  
+This is a lightweight prototype memory mechanism rather than a production knowledge/memory system.
 
 ---
 
-## 9. Future Enhancements
+## Observability and Metrics
 
-- Replace placeholder LLM wrapper with Gemini models  
-- Add MCP tool support  
-- Add code execution for programming lessons  
-- Deploy with Vertex AI Agent Engine  
-- Add UI (Streamlit / Flutter)  
-- Add voice input + speech output  
+The project includes:
 
----
+- Rich console logging
+- Event-oriented logging helpers
+- Session duration tracking
+- Average score tracking
+- Basic tutor-clarity tracking
 
-## 10. Conclusion
-
-TutorChain demonstrates the core principles taught in the Agents Intensive workshop:
-
-- Multi-agent system design  
-- Tool integration  
-- LLM-based evaluation  
-- Long-term memory management  
-- Observability and metrics  
-- Mastery-based learning  
-
-It serves as a strong foundation for personalized AI learning systems.
+These metrics are intended for prototype observability and experimentation.
 
 ---
 
-## 11. License  
+## Future Improvements
+
+Potential next steps include:
+
+- Implementing a real Gemini/OpenAI provider in the LLM wrapper
+- Replacing string-similarity assessment with semantic/rubric-based answer evaluation
+- Improving reference-answer handling
+- Adding reliable automated tests
+- Adding code execution for programming lessons
+- Expanding tool integrations
+- Adding a web UI
+- Deploying the agent workflow
+- Adding voice interaction
+
+---
+
+## Why This Project Matters
+
+TutorChain was built as a capstone project to explore **multi-agent orchestration, tool integration, persistent learner state, evaluation, and mastery-oriented workflows**.
+
+It is a foundation for experimenting with personalized AI learning systems rather than a claim of production readiness.
+
+---
+
+## License
+
 MIT License
